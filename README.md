@@ -12,7 +12,7 @@ A KOReader plugin for Android that replaces the built-in virtual keyboard with t
 
 ## Limitations
 
-Input is routed through a file-based bridge between the Android IME and KOReader, which means basic typing and backspace work but advanced IME features do not. This includes autocorrect, swipe-to-select, and swipe-to-delete, which may not work.
+Input is routed through a file-based bridge between the Android IME and KOReader, which means basic typing and backspace work but advanced IME features do not. Swipe gestures (swipe-to-select, swipe-to-delete) will not work. Autocorrect may work depending on your keyboard app.
 
 ## Installation
 
