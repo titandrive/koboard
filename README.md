@@ -1,4 +1,4 @@
-<img width="1080" height="2340" alt="image" src="https://github.com/user-attachments/assets/9e491599-5bdb-4e6f-ae41-c3d0cb5e24d3" /># KOBoard
+# KOBoard
 
 A KOReader plugin for Android that replaces the built-in virtual keyboard with the system IME (your default Android keyboard).
 
