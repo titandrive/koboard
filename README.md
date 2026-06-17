@@ -8,7 +8,11 @@ A KOReader plugin for Android that replaces the built-in virtual keyboard with t
 
 - Replaces KOReader's built-in keyboard with your system keyboard
 - Full text input including backspace
-- Works with any Android IME (Gboard, SwiftKey, etc.)
+- Tested with Gboard, Samsung Keyboard, and Heliboard
+
+## Limitations
+
+Input is routed through a file-based bridge between the Android IME and KOReader, which means basic typing and backspace work but advanced IME gestures do not. Notably, swipe-to-delete (swipe left on the backspace key to delete multiple words) will not work.
 
 ## Installation
 
