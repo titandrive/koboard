@@ -1,4 +1,4 @@
-# KOBoard
+<img width="1080" height="2340" alt="image" src="https://github.com/user-attachments/assets/9e491599-5bdb-4e6f-ae41-c3d0cb5e24d3" /># KOBoard
 
 A KOReader plugin for Android that replaces the built-in virtual keyboard with the system IME (your default Android keyboard).
 
@@ -9,6 +9,9 @@ A KOReader plugin for Android that replaces the built-in virtual keyboard with t
 - Replaces KOReader's built-in keyboard with your system keyboard
 - Full text input including backspace
 - Tested with Gboard, Samsung Keyboard, and Heliboard
+
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/5a0a6aad-2b39-445f-824f-fe436d749736" />
+
 
 ## Limitations
 
