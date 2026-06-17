@@ -219,8 +219,6 @@ function KOBoard:init()
     local ok, android = pcall(require, "android")
     if not ok then logger.warn("KOBoard: no android module:", android); return end
 
-    showOverlay("KOBoard: loading…")
-
     local cache_dir = getCacheDir(android)
     if not cache_dir then showOverlay("KOBoard: no cache dir"); return end
 
@@ -302,7 +300,6 @@ function KOBoard:init()
         pcall(hideIME)
     end
 
-    showOverlay("KOBoard: ready")
 end
 
 return KOBoard
