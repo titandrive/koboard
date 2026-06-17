@@ -2,6 +2,8 @@
 
 A KOReader plugin for Android that replaces the built-in virtual keyboard with the system IME (your default Android keyboard).
 
+> **Android only** — this plugin does nothing on Kindle, Kobo, or other non-Android devices.
+
 > **Experimental** — tested on Android with KOReader nightly builds. Behaviour may vary across devices and keyboard apps.
 
 ## Features
