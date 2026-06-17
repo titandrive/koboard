@@ -10,7 +10,7 @@ A KOReader plugin for Android that replaces the built-in virtual keyboard with t
 - Full text input including backspace
 - Tested with Gboard, Samsung Keyboard, and Heliboard
 
-<img width="150" alt="image" src="https://github.com/user-attachments/assets/5a0a6aad-2b39-445f-824f-fe436d749736" />
+<img width="175" alt="image" src="https://github.com/user-attachments/assets/5a0a6aad-2b39-445f-824f-fe436d749736" />
 
 
 ## Limitations
