@@ -21,7 +21,7 @@ Input is routed through a file-based bridge between the Android IME and KOReader
 
 ## Installation
 
-1. Download `koboard.koplugin.zip` from the [latest release](https://github.com/titandrive/kboard/releases/latest) and unzip it, or clone this repo.
+1. Download `koboard.koplugin.zip` from the [latest release](https://github.com/titandrive/koboard/releases/latest) and unzip it, or clone this repo.
 2. Copy the `koboard.koplugin` folder to `/sdcard/koreader/plugins/` on your device.
 3. Restart KOReader.
 4. Enable the plugin under **Tools → More tools → KOBoard**.
