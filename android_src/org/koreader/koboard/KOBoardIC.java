@@ -1,5 +1,6 @@
 package org.koreader.koboard;
 
+import android.text.Editable;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.BaseInputConnection;
@@ -25,40 +26,86 @@ public class KOBoardIC extends BaseInputConnection {
         }
     }
 
-    private boolean backspace() {
-        append("BS");
-        return true;
+    private void deleteText(int count) {
+        for (int i = 0; i < count; i++) {
+            append("BS");
+        }
+    }
+
+    private String editableText() {
+        Editable editable = getEditable();
+        return editable == null ? "" : editable.toString();
+    }
+
+    private boolean forwardDifference(String before, String after) {
+        int prefixLength = 0;
+        int prefixLimit = Math.min(before.length(), after.length());
+        while (prefixLength < prefixLimit
+                && before.charAt(prefixLength) == after.charAt(prefixLength)) {
+            prefixLength++;
+        }
+
+        int suffixLength = 0;
+        int suffixLimit = Math.min(
+            before.length() - prefixLength,
+            after.length() - prefixLength
+        );
+        while (suffixLength < suffixLimit
+                && before.charAt(before.length() - suffixLength - 1)
+                    == after.charAt(after.length() - suffixLength - 1)) {
+            suffixLength++;
+        }
+
+        int removedLength = before.length() - prefixLength - suffixLength;
+        String inserted = after.substring(prefixLength, after.length() - suffixLength);
+        deleteText(removedLength);
+        if (inserted.length() > 0) {
+            append("CH:" + inserted);
+        }
+        return removedLength > 0 || inserted.length() > 0;
     }
 
     @Override
     public boolean commitText(CharSequence text, int newCursorPosition) {
-        if (text != null && text.length() > 0) {
-            append("CH:" + text.toString());
-        }
-        return true;
+        String before = editableText();
+        boolean handled = super.commitText(text, newCursorPosition);
+        forwardDifference(before, editableText());
+        return handled;
     }
 
     @Override
     public boolean setComposingText(CharSequence text, int newCursorPosition) {
-        if (text != null && text.length() > 0) {
-            append("CH:" + text.toString());
-        }
-        return true;
+        String before = editableText();
+        boolean handled = super.setComposingText(text, newCursorPosition);
+        forwardDifference(before, editableText());
+        return handled;
     }
 
     @Override
     public boolean finishComposingText() {
-        return true;
+        return super.finishComposingText();
     }
 
     @Override
     public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-        return backspace();
+        String before = editableText();
+        boolean handled = super.deleteSurroundingText(beforeLength, afterLength);
+        if (!forwardDifference(before, editableText()) && beforeLength > 0) {
+            // The Java buffer does not know about text that predates this input
+            // connection, but KOReader may still have text to erase.
+            deleteText(beforeLength);
+        }
+        return handled;
     }
 
     @Override
     public boolean deleteSurroundingTextInCodePoints(int beforeLength, int afterLength) {
-        return backspace();
+        String before = editableText();
+        boolean handled = super.deleteSurroundingTextInCodePoints(beforeLength, afterLength);
+        if (!forwardDifference(before, editableText()) && beforeLength > 0) {
+            deleteText(beforeLength);
+        }
+        return handled;
     }
 
     @Override
@@ -66,23 +113,13 @@ public class KOBoardIC extends BaseInputConnection {
         if (event != null
                 && event.getKeyCode() == KeyEvent.KEYCODE_DEL
                 && event.getAction() == KeyEvent.ACTION_DOWN) {
-            return backspace();
+            String before = editableText();
+            boolean handled = super.deleteSurroundingText(1, 0);
+            if (!forwardDifference(before, editableText())) {
+                deleteText(1);
+            }
+            return handled;
         }
         return super.sendKeyEvent(event);
-    }
-
-    @Override
-    public CharSequence getTextBeforeCursor(int length, int flags) {
-        return "x";
-    }
-
-    @Override
-    public CharSequence getSelectedText(int flags) {
-        return "";
-    }
-
-    @Override
-    public CharSequence getTextAfterCursor(int length, int flags) {
-        return "";
     }
 }
