@@ -1,6 +1,7 @@
 package org.koreader.koboard;
 
 import android.app.Activity;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import java.io.File;
@@ -30,17 +31,24 @@ public class KOBoardShow implements Runnable {
             view.setExtFilesDir(extFilesDir);
         }
 
+        view.setVisibility(View.VISIBLE);
         view.setActive(true);
         view.setFocusable(true);
         view.setFocusableInTouchMode(true);
         view.requestFocus();
-        imm.showSoftInput(view, InputMethodManager.SHOW_FORCED);
-        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+        imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
     }
 
     public static void hide() {
         if (view != null) {
-            view.setActive(false);
+            view.post(new Runnable() {
+                @Override
+                public void run() {
+                    view.setActive(false);
+                    view.clearFocus();
+                    view.setVisibility(View.GONE);
+                }
+            });
         }
     }
 }
