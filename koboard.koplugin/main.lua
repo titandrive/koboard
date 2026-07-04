@@ -259,7 +259,7 @@ function KOBoard:init()
 
     local function addText(text)
         if not (current_vk and current_vk.addChar) then return end
-        for ch in text:gmatch(".") do
+        for ch in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
             pcall(current_vk.addChar, current_vk, ch)
         end
     end
