@@ -1,4 +1,4 @@
-# KOBoard
+# koboard.koplugin
 
 A KOReader plugin for Android that replaces the built-in virtual keyboard with the system IME (your default Android keyboard).
 
