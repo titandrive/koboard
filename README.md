@@ -29,6 +29,8 @@ Input is routed through a file-based bridge between the Android IME and KOReader
 
 Once the plugin is enabled, KOBoard activates automatically whenever a text field is opened. To temporarily use KOReader's built-in keyboard instead, open **Tools → KOBoard** and turn **Enable KOBoard** off. The KOBoard menu also includes an **Update** entry reserved for the updater flow.
 
+KOBoard also registers dispatcher actions for automation: `koboard_enable`, `koboard_disable`, and `koboard_toggle`.
+
 ## How it works
 
 KOBoard embeds a small compiled Java component (loaded at runtime via `DexClassLoader`) that registers a custom `InputConnection` with Android's `InputMethodManager`. This gives the system IME a real connection to type into. Keypresses and backspace are written to a file, which KOReader polls every 50ms and forwards to the active `VirtualKeyboard` instance.

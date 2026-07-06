@@ -1,4 +1,5 @@
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
+local Dispatcher = require("dispatcher")
 local logger = require("logger")
 local _ = require("gettext")
 
@@ -62,6 +63,42 @@ function KOBoard:setEnabled(enabled)
     if not enabled and self.hideKOBoardIME then
         self:hideKOBoardIME()
     end
+end
+
+function KOBoard:onDispatcherRegisterActions()
+    Dispatcher:registerAction("koboard_enable", {
+        category = "none",
+        event = "KOBoardEnable",
+        title = _("Enable KOBoard"),
+        general = true,
+    })
+    Dispatcher:registerAction("koboard_disable", {
+        category = "none",
+        event = "KOBoardDisable",
+        title = _("Disable KOBoard"),
+        general = true,
+    })
+    Dispatcher:registerAction("koboard_toggle", {
+        category = "none",
+        event = "KOBoardToggle",
+        title = _("Toggle KOBoard"),
+        general = true,
+    })
+end
+
+function KOBoard:onKOBoardEnable()
+    self:setEnabled(true)
+    return true
+end
+
+function KOBoard:onKOBoardDisable()
+    self:setEnabled(false)
+    return true
+end
+
+function KOBoard:onKOBoardToggle()
+    self:setEnabled(not self:isEnabled())
+    return true
 end
 
 function KOBoard:addToMainMenu(menu_items)
@@ -265,6 +302,7 @@ local function makeIMEFunctions(android, classes)
 end
 
 function KOBoard:init()
+    self:onDispatcherRegisterActions()
     if self.ui and self.ui.menu then
         self.ui.menu:registerToMainMenu(self)
     end
