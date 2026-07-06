@@ -30,11 +30,15 @@ Input is routed through a file-based bridge between the Android IME and KOReader
 
 Once the plugin is enabled, KOBoard activates automatically whenever a text field is opened. To temporarily use KOReader's built-in keyboard instead, open **Tools → KOBoard** and turn **Enable KOBoard** off.
 
-## Updating
+## Menu and updates
 
-Open **Tools → KOBoard** to see the installed version and check for newer GitHub releases. When an update is available, KOBoard can download `koboard.koplugin.zip`, install it over the current plugin folder, and restart KOReader.
+Open **Tools → KOBoard** for the plugin controls:
 
-The **Notify on wake when update available** option controls background update checks. When enabled, KOBoard checks periodically while KOReader is running and notifies you if a newer release is available.
+- **Enable KOBoard** turns the Android keyboard bridge on or off.
+- **Notify on wake when update available** controls background update checks after KOReader starts, resumes, or leaves standby.
+- **Installed version: vX.Y.Z** checks GitHub releases for a newer version. When an update is available, the entry changes to **Update available: vX.Y.Z → vA.B.C**.
+
+When an update is available, KOBoard shows the release notes and can download `koboard.koplugin.zip`, install it over the current plugin folder, and restart KOReader.
 
 KOBoard also registers dispatcher actions for automation: `koboard_enable`, `koboard_disable`, and `koboard_toggle`.
 
