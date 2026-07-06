@@ -10,6 +10,7 @@ A KOReader plugin for Android that replaces the built-in virtual keyboard with t
 
 - Replaces KOReader's built-in keyboard with your system keyboard
 - Minimal KOBoard menu with an enable/disable toggle
+- Update checker with optional background notifications
 - Full text input including backspace
 - Tested with Gboard, Samsung Keyboard, and Heliboard
 
@@ -25,9 +26,11 @@ Input is routed through a file-based bridge between the Android IME and KOReader
 1. Download `koboard.koplugin.zip` from the [latest release](https://github.com/titandrive/koboard/releases/latest) and unzip it, or clone this repo.
 2. Copy the `koboard.koplugin` folder to `/sdcard/koreader/plugins/` on your device.
 3. Restart KOReader.
-4. Enable the plugin under **Tools → More tools → KOBoard**.
+4. Enable the plugin under **Tools → KOBoard**.
 
-Once the plugin is enabled, KOBoard activates automatically whenever a text field is opened. To temporarily use KOReader's built-in keyboard instead, open **Tools → KOBoard** and turn **Enable KOBoard** off. The KOBoard menu also includes an **Update** entry reserved for the updater flow.
+Once the plugin is enabled, KOBoard activates automatically whenever a text field is opened. To temporarily use KOReader's built-in keyboard instead, open **Tools → KOBoard** and turn **Enable KOBoard** off.
+
+The KOBoard menu also shows the installed version, checks for newer GitHub releases, can notify in the background when an update is available, and can install an update then restart KOReader.
 
 KOBoard also registers dispatcher actions for automation: `koboard_enable`, `koboard_disable`, and `koboard_toggle`.
 
