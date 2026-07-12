@@ -33,9 +33,7 @@ public class KOBoardView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        outAttrs.inputType = InputType.TYPE_CLASS_TEXT
-            | InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+        outAttrs.inputType = InputType.TYPE_CLASS_TEXT;
         outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE
             | EditorInfo.IME_FLAG_NO_EXTRACT_UI
             | EditorInfo.IME_FLAG_NO_FULLSCREEN;
