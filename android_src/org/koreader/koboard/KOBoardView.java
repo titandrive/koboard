@@ -5,6 +5,7 @@ import android.text.InputType;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputMethodManager;
 import java.io.File;
 
 public class KOBoardView extends View {
@@ -36,6 +37,11 @@ public class KOBoardView extends View {
         selectionEnd = end;
         if (inputConnection != null) {
             inputConnection.setEditorState(editorText, start, end);
+            InputMethodManager imm = (InputMethodManager)
+                getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.updateSelection(this, start, end, -1, -1);
+            }
         }
     }
 
