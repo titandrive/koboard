@@ -2,6 +2,7 @@ package org.koreader.koboard;
 
 import android.text.Editable;
 import android.text.Selection;
+import android.util.Base64;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.BaseInputConnection;
@@ -13,12 +14,11 @@ import java.io.IOException;
 
 public class KOBoardIC extends BaseInputConnection {
     private final File actionFile;
-    private final File debugFile;
+    private boolean synchronizing;
 
     public KOBoardIC(View targetView, File extFilesDir) {
         super(targetView, true);
         this.actionFile = new File(extFilesDir, "koboard_input");
-        this.debugFile = new File(extFilesDir, "koboard_debug.txt");
     }
 
     private void append(String action) {
@@ -31,121 +31,70 @@ public class KOBoardIC extends BaseInputConnection {
         }
     }
 
-    private void log(String message) {
-        try {
-            FileWriter writer = new FileWriter(debugFile, true);
-            writer.write(message);
-            writer.write("\n");
-            writer.close();
-        } catch (IOException ignored) {
-        }
-    }
-
-    private void deleteText(int count) {
-        for (int i = 0; i < count; i++) {
-            append("BS");
-        }
-    }
-
-    private String editableText() {
+    public void setEditorState(String text, int selectionStart, int selectionEnd) {
         Editable editable = getEditable();
-        return editable == null ? "" : editable.toString();
+        if (editable == null) return;
+        synchronizing = true;
+        editable.replace(0, editable.length(), text == null ? "" : text);
+        int start = Math.max(0, Math.min(selectionStart, editable.length()));
+        int end = Math.max(0, Math.min(selectionEnd, editable.length()));
+        Selection.setSelection(editable, start, end);
+        synchronizing = false;
     }
 
-    private boolean forwardDifference(String before, String after) {
-        int prefixLength = 0;
-        int prefixLimit = Math.min(before.length(), after.length());
-
-        while (prefixLength < prefixLimit
-                && before.charAt(prefixLength) == after.charAt(prefixLength)) {
-            prefixLength++;
-        }
-
-        int suffixLength = 0;
-        int suffixLimit = Math.min(
-            before.length() - prefixLength,
-            after.length() - prefixLength
+    private void emitState() {
+        if (synchronizing) return;
+        Editable editable = getEditable();
+        if (editable == null) return;
+        int start = Selection.getSelectionStart(editable);
+        int end = Selection.getSelectionEnd(editable);
+        if (start < 0) start = editable.length();
+        if (end < 0) end = start;
+        String encoded = Base64.encodeToString(
+            editable.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+            Base64.NO_WRAP
         );
-
-        while (suffixLength < suffixLimit
-                && before.charAt(before.length() - suffixLength - 1)
-                    == after.charAt(after.length() - suffixLength - 1)) {
-            suffixLength++;
-        }
-
-        int removedLength =
-            before.length() - prefixLength - suffixLength;
-
-        String inserted =
-            after.substring(prefixLength, after.length() - suffixLength);
-
-        if (removedLength == 0 && inserted.length() == 0) {
-            return false;
-        }
-
-        // KOReader can only edit immediately before the cursor.
-        // If the changed region has a preserved suffix, temporarily
-        // remove that suffix, apply the replacement, then restore it.
-        deleteText(removedLength + suffixLength);
-
-        if (inserted.length() > 0) {
-            append("CH:" + inserted);
-        }
-
-        if (suffixLength > 0) {
-            append("CH:" + after.substring(after.length() - suffixLength));
-        }
-
-        return true;
+        append("ST:" + start + ":" + end + ":" + encoded);
     }
 
     @Override
     public boolean commitText(CharSequence text, int newCursorPosition) {
-        log("commitText text=[" + text + "] cursor=" + newCursorPosition
-            + " editable=[" + editableText() + "]");
-        String before = editableText();
+        synchronizing = true;
         boolean handled = super.commitText(text, newCursorPosition);
-        forwardDifference(before, editableText());
+        synchronizing = false;
+        emitState();
         return handled;
     }
 
     @Override
     public boolean setComposingText(CharSequence text, int newCursorPosition) {
-        log("setComposingText text=[" + text + "] cursor=" + newCursorPosition
-            + " editable=[" + editableText() + "]");
-        String before = editableText();
+        synchronizing = true;
         boolean handled = super.setComposingText(text, newCursorPosition);
-        forwardDifference(before, editableText());
+        synchronizing = false;
+        emitState();
         return handled;
     }
 
     @Override
     public boolean finishComposingText() {
-        log("finishComposingText editable=[" + editableText() + "]");
-        return super.finishComposingText();
+        boolean handled = super.finishComposingText();
+        emitState();
+        return handled;
     }
 
     @Override
     public CharSequence getTextBeforeCursor(int n, int flags) {
-        CharSequence result = super.getTextBeforeCursor(n, flags);
-        log("getTextBeforeCursor n=" + n + " flags=" + flags
-            + " result=[" + result + "]");
-        return result;
+        return super.getTextBeforeCursor(n, flags);
     }
 
     @Override
     public CharSequence getTextAfterCursor(int n, int flags) {
-        CharSequence result = super.getTextAfterCursor(n, flags);
-        log("getTextAfterCursor n=" + n + " flags=" + flags
-            + " result=[" + result + "]");
-        return result;
+        return super.getTextAfterCursor(n, flags);
     }
 
     @Override
     public CharSequence getSelectedText(int flags) {
-        CharSequence result = super.getSelectedText(flags);
-        log("getSelectedText flags=" + flags + " result=[" + result + "]");
-        return result;
+        return super.getSelectedText(flags);
     }
 
     @Override
@@ -174,33 +123,31 @@ public class KOBoardIC extends BaseInputConnection {
             result.selectionEnd = 0;
         }
 
-        log("getExtractedText flags=" + flags
-            + " text=[" + result.text + "]"
-            + " selectionStart=" + result.selectionStart
-            + " selectionEnd=" + result.selectionEnd);
-
         return result;
     }
 
     @Override
     public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-        String before = editableText();
+        synchronizing = true;
         boolean handled = super.deleteSurroundingText(beforeLength, afterLength);
-        if (!forwardDifference(before, editableText()) && beforeLength > 0) {
-            // The Java buffer does not know about text that predates this input
-            // connection, but KOReader may still have text to erase.
-            deleteText(beforeLength);
-        }
+        synchronizing = false;
+        emitState();
         return handled;
     }
 
     @Override
     public boolean deleteSurroundingTextInCodePoints(int beforeLength, int afterLength) {
-        String before = editableText();
+        synchronizing = true;
         boolean handled = super.deleteSurroundingTextInCodePoints(beforeLength, afterLength);
-        if (!forwardDifference(before, editableText()) && beforeLength > 0) {
-            deleteText(beforeLength);
-        }
+        synchronizing = false;
+        emitState();
+        return handled;
+    }
+
+    @Override
+    public boolean setSelection(int start, int end) {
+        boolean handled = super.setSelection(start, end);
+        emitState();
         return handled;
     }
 
@@ -209,11 +156,10 @@ public class KOBoardIC extends BaseInputConnection {
         if (event != null
                 && event.getKeyCode() == KeyEvent.KEYCODE_DEL
                 && event.getAction() == KeyEvent.ACTION_DOWN) {
-            String before = editableText();
+            synchronizing = true;
             boolean handled = super.deleteSurroundingText(1, 0);
-            if (!forwardDifference(before, editableText())) {
-                deleteText(1);
-            }
+            synchronizing = false;
+            emitState();
             return handled;
         }
         return super.sendKeyEvent(event);

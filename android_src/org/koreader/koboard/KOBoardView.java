@@ -10,6 +10,10 @@ import java.io.File;
 public class KOBoardView extends View {
     private File extFilesDir;
     private boolean active;
+    private String editorText = "";
+    private int selectionStart;
+    private int selectionEnd;
+    private KOBoardIC inputConnection;
 
     public KOBoardView(Context context, File extFilesDir) {
         super(context);
@@ -26,6 +30,15 @@ public class KOBoardView extends View {
         this.active = active;
     }
 
+    public void setEditorState(String text, int start, int end) {
+        editorText = text == null ? "" : text;
+        selectionStart = start;
+        selectionEnd = end;
+        if (inputConnection != null) {
+            inputConnection.setEditorState(editorText, start, end);
+        }
+    }
+
     @Override
     public boolean onCheckIsTextEditor() {
         return active;
@@ -37,6 +50,10 @@ public class KOBoardView extends View {
         outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE
             | EditorInfo.IME_FLAG_NO_EXTRACT_UI
             | EditorInfo.IME_FLAG_NO_FULLSCREEN;
-        return new KOBoardIC(this, extFilesDir);
+        inputConnection = new KOBoardIC(this, extFilesDir);
+        inputConnection.setEditorState(editorText, selectionStart, selectionEnd);
+        outAttrs.initialSelStart = selectionStart;
+        outAttrs.initialSelEnd = selectionEnd;
+        return inputConnection;
     }
 }

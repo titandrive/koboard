@@ -6,7 +6,7 @@ local _ = require("gettext")
 
 local Updater = {}
 
-local GITHUB_REPO = "gerardomtz26/koboard"
+local GITHUB_REPO = "titandrive/koboard"
 local PLUGIN_DIR = "koboard.koplugin"
 local PLUGIN_ZIP = "koboard.koplugin.zip"
 local USER_AGENT_PREFIX = "KOReader-KOBoard/"
