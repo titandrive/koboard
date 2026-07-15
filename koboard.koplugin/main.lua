@@ -310,6 +310,7 @@ local function getExtFilesDir(android)
 end
 
 local function makeIMEFunctions(android, classes)
+    local ffi = require("ffi")
     local jvm = android.app.activity.vm
     local act = android.app.activity.clazz
 
@@ -329,7 +330,9 @@ local function makeIMEFunctions(android, classes)
             local ctor = env[0].GetMethodID(env, classes.show, "<init>",
                 "(Landroid/view/inputmethod/InputMethodManager;Landroid/app/Activity;Ljava/io/File;Ljava/lang/String;II)V")
             local shower = env[0].NewObject(env, classes.show, ctor, imm, act,
-                ext_file, editor_text, selection_start or 0, selection_end or selection_start or 0)
+                ext_file, editor_text,
+                ffi.cast("jint", selection_start or 0),
+                ffi.cast("jint", selection_end or selection_start or 0))
             local run_mid = env[0].GetMethodID(env, env[0].GetObjectClass(env, act),
                 "runOnUiThread", "(Ljava/lang/Runnable;)V")
             env[0].CallVoidMethod(env, act, run_mid, shower)
@@ -348,7 +351,8 @@ local function makeIMEFunctions(android, classes)
             local update = env[0].GetStaticMethodID(env, classes.show,
                 "updateState", "(Ljava/lang/String;II)V")
             env[0].CallStaticVoidMethod(env, classes.show, update, editor_text,
-                selection_start or 0, selection_end or selection_start or 0)
+                ffi.cast("jint", selection_start or 0),
+                ffi.cast("jint", selection_end or selection_start or 0))
             env[0].DeleteLocalRef(env, editor_text)
         end)
     end
@@ -442,7 +446,8 @@ function KOBoard:init()
         local inputbox = current_vk and current_vk.inputbox
         if not inputbox then return "", 0 end
         local text = inputbox:getText() or ""
-        local cursor = utf16Offset(inputbox.charlist or {}, inputbox.charpos or 1)
+        local chars = require("util").splitToChars(text)
+        local cursor = utf16Offset(chars, inputbox.charpos or 1)
         return text, cursor
     end
 
