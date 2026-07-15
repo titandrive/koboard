@@ -14,19 +14,28 @@ import java.io.IOException;
 
 public class KOBoardIC extends BaseInputConnection {
     private final File actionFile;
+    private final File actionTempFile;
     private boolean synchronizing;
 
     public KOBoardIC(View targetView, File extFilesDir) {
         super(targetView, true);
         this.actionFile = new File(extFilesDir, "koboard_input");
+        this.actionTempFile = new File(extFilesDir, "koboard_input.tmp");
     }
 
-    private void append(String action) {
+    private synchronized void publish(String action) {
         try {
-            FileWriter writer = new FileWriter(actionFile, true);
+            FileWriter writer = new FileWriter(actionTempFile, false);
             writer.write(action);
             writer.write("\n");
             writer.close();
+            if (!actionTempFile.renameTo(actionFile)) {
+                // Some Java implementations do not replace an existing target.
+                // Lua only renames actionFile away, so a brief missing target is
+                // safe: the next poll will claim this complete snapshot.
+                actionFile.delete();
+                actionTempFile.renameTo(actionFile);
+            }
         } catch (IOException ignored) {
         }
     }
@@ -54,7 +63,7 @@ public class KOBoardIC extends BaseInputConnection {
             editable.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
             Base64.NO_WRAP
         );
-        append("ST:" + start + ":" + end + ":" + encoded);
+        publish("ST:" + start + ":" + end + ":" + encoded);
     }
 
     @Override
