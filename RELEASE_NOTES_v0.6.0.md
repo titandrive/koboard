@@ -2,7 +2,7 @@
 
 This release significantly improves KOBoard's support for modern Android keyboards, especially Microsoft SwiftKey.
 
-The original suggestions and autocorrection work was contributed by [Gerardo Martínez (`gerardomtz26`)](https://github.com/gerardomtz26) through the [original contribution](https://github.com/titandrive/koboard/compare/main...gerardomtz26:koboard:main). Thank you, Gerardo, for making this release possible.
+The original suggestions and autocorrection work was contributed by [Gerardo Martínez (`gerardomtz26`)](https://github.com/gerardomtz26). You can view [Gerardo's four original commits and changes](https://github.com/titandrive/koboard/compare/f0bac13...0b089f4). Thank you, Gerardo, for making this release possible.
 
 ## What's new
 
