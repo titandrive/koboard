@@ -12,11 +12,18 @@ public class KOBoardShow implements Runnable {
     private final InputMethodManager imm;
     private final Activity activity;
     private final File extFilesDir;
+    private final String editorText;
+    private final int selectionStart;
+    private final int selectionEnd;
 
-    public KOBoardShow(InputMethodManager imm, Activity activity, File extFilesDir) {
+    public KOBoardShow(InputMethodManager imm, Activity activity, File extFilesDir,
+            String editorText, int selectionStart, int selectionEnd) {
         this.imm = imm;
         this.activity = activity;
         this.extFilesDir = extFilesDir;
+        this.editorText = editorText;
+        this.selectionStart = selectionStart;
+        this.selectionEnd = selectionEnd;
     }
 
     @Override
@@ -32,11 +39,23 @@ public class KOBoardShow implements Runnable {
         }
 
         view.setVisibility(View.VISIBLE);
+        view.setEditorState(editorText, selectionStart, selectionEnd);
         view.setActive(true);
         view.setFocusable(true);
         view.setFocusableInTouchMode(true);
         view.requestFocus();
         imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    public static void updateState(final String text, final int start, final int end) {
+        if (view != null) {
+            view.post(new Runnable() {
+                @Override
+                public void run() {
+                    view.setEditorState(text, start, end);
+                }
+            });
+        }
     }
 
     public static void hide() {

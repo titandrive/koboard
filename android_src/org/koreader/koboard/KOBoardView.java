@@ -5,11 +5,16 @@ import android.text.InputType;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputMethodManager;
 import java.io.File;
 
 public class KOBoardView extends View {
     private File extFilesDir;
     private boolean active;
+    private String editorText = "";
+    private int selectionStart;
+    private int selectionEnd;
+    private KOBoardIC inputConnection;
 
     public KOBoardView(Context context, File extFilesDir) {
         super(context);
@@ -26,6 +31,20 @@ public class KOBoardView extends View {
         this.active = active;
     }
 
+    public void setEditorState(String text, int start, int end) {
+        editorText = text == null ? "" : text;
+        selectionStart = start;
+        selectionEnd = end;
+        if (inputConnection != null) {
+            inputConnection.setEditorState(editorText, start, end);
+            InputMethodManager imm = (InputMethodManager)
+                getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.updateSelection(this, start, end, -1, -1);
+            }
+        }
+    }
+
     @Override
     public boolean onCheckIsTextEditor() {
         return active;
@@ -33,12 +52,14 @@ public class KOBoardView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        outAttrs.inputType = InputType.TYPE_CLASS_TEXT
-            | InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+        outAttrs.inputType = InputType.TYPE_CLASS_TEXT;
         outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE
             | EditorInfo.IME_FLAG_NO_EXTRACT_UI
             | EditorInfo.IME_FLAG_NO_FULLSCREEN;
-        return new KOBoardIC(this, extFilesDir);
+        inputConnection = new KOBoardIC(this, extFilesDir);
+        inputConnection.setEditorState(editorText, selectionStart, selectionEnd);
+        outAttrs.initialSelStart = selectionStart;
+        outAttrs.initialSelEnd = selectionEnd;
+        return inputConnection;
     }
 }
