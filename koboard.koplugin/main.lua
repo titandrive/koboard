@@ -496,6 +496,9 @@ function KOBoard:init()
                         local text = b64decode(encoded)
                         local inputbox = current_vk and current_vk.inputbox
                         if inputbox then
+                            if text ~= inputbox:getText() then
+                                inputbox.is_text_edited = true
+                            end
                             inputbox:setText(text, true)
                             local cursor_pos = charPosFromUtf16(text, tonumber(sel_end))
                             inputbox:moveCursorToCharPos(cursor_pos)
@@ -534,6 +537,13 @@ function KOBoard:init()
     VK.showKeyboard = function(vk, ...)
         if not self:isEnabled() then
             return original_showKeyboard(vk, ...)
+        end
+        if kb_active and current_vk == vk then
+            local text, cursor = editorState()
+            rememberEditorState(text, cursor)
+            local ok, err = pcall(showIME, text, cursor, cursor)
+            if not ok then showOverlay("KOBoard error: " .. tostring(err)) end
+            return
         end
         if kb_active or vk.visible then return end
         current_vk = vk
