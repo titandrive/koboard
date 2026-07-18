@@ -17,6 +17,57 @@ local cached_zip_url = nil
 local last_check_time = nil
 local check_in_flight = false
 
+local function show_install_error(message)
+    message = tostring(message)
+    message = message:match("^(.-)\nstack traceback:") or message
+    UIManager:show(InfoMessage:new{
+        text = _("Installation failed: ") .. message,
+        timeout = 5,
+    })
+end
+
+local function shell_quote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local function command_succeeded(ret)
+    return ret == 0 or ret == true
+end
+
+local function install_zip_fallback(zip_path, plugin_path, cache_dir, lfs)
+    local extract_dir = cache_dir .. "/koboard_extract"
+    os.execute("rm -rf " .. shell_quote(extract_dir))
+    local ok_mkdir, mkdir_err = lfs.mkdir(extract_dir)
+    if not ok_mkdir then
+        return false, _("Could not create extraction folder: ") .. tostring(mkdir_err)
+    end
+
+    local ret = os.execute("unzip -oq " .. shell_quote(zip_path)
+        .. " -d " .. shell_quote(extract_dir))
+    if not command_succeeded(ret) then
+        os.execute("rm -rf " .. shell_quote(extract_dir))
+        return false, _("Could not unzip update archive.")
+    end
+
+    local source_dir = extract_dir
+    if lfs.attributes(extract_dir .. "/" .. PLUGIN_DIR, "mode") == "directory" then
+        source_dir = extract_dir .. "/" .. PLUGIN_DIR
+    end
+    if lfs.attributes(source_dir .. "/_meta.lua", "mode") ~= "file" then
+        os.execute("rm -rf " .. shell_quote(extract_dir))
+        return false, _("Update archive does not contain KOBoard plugin files.")
+    end
+
+    ret = os.execute("mkdir -p " .. shell_quote(plugin_path)
+        .. " && cp -R " .. shell_quote(source_dir .. "/.")
+        .. " " .. shell_quote(plugin_path .. "/"))
+    os.execute("rm -rf " .. shell_quote(extract_dir))
+    if not command_succeeded(ret) then
+        return false, _("Could not copy update files into plugin folder.")
+    end
+    return true
+end
+
 function Updater.getInstalledVersion()
     local DataStorage = require("datastorage")
     local meta_path = DataStorage:getDataDir() .. "/plugins/" .. PLUGIN_DIR .. "/_meta.lua"
@@ -266,9 +317,13 @@ function Updater.install(zip_url, old_version, new_version, on_success)
     })
 
     UIManager:scheduleIn(0.1, function()
+        local ok_install, install_err = xpcall(function()
         local cache_dir = DataStorage:getSettingsDir() .. "/koboard_cache"
         if lfs.attributes(cache_dir, "mode") ~= "directory" then
-            lfs.mkdir(cache_dir)
+            local ok_mkdir, mkdir_err = lfs.mkdir(cache_dir)
+            if not ok_mkdir then
+                error(_("Could not create update cache: ") .. tostring(mkdir_err))
+            end
         end
         local zip_path = cache_dir .. "/" .. PLUGIN_ZIP
 
@@ -305,7 +360,7 @@ function Updater.install(zip_url, old_version, new_version, on_success)
         if not downloaded then
             pcall(os.remove, zip_path)
             local ret = os.execute(string.format("curl -sfL -o %q %q", zip_path, zip_url))
-            downloaded = ret == 0 or ret == true
+            downloaded = command_succeeded(ret)
         end
         if not downloaded then
             pcall(os.remove, zip_path)
@@ -314,14 +369,16 @@ function Updater.install(zip_url, old_version, new_version, on_success)
         end
 
         local plugin_path = DataStorage:getDataDir() .. "/plugins/" .. PLUGIN_DIR
-        local ok, err = Device:unpackArchive(zip_path, plugin_path, true)
+        local ok, err
+        if type(Device.unpackArchive) == "function" then
+            ok, err = Device:unpackArchive(zip_path, plugin_path, true)
+        else
+            ok, err = install_zip_fallback(zip_path, plugin_path, cache_dir, lfs)
+        end
         pcall(os.remove, zip_path)
 
         if not ok then
-            UIManager:show(InfoMessage:new{
-                text = _("Installation failed: ") .. tostring(err),
-                timeout = 5,
-            })
+            show_install_error(err)
             return
         end
 
@@ -335,6 +392,11 @@ function Updater.install(zip_url, old_version, new_version, on_success)
                 UIManager:restartKOReader()
             end,
         })
+        end, debug.traceback)
+
+        if not ok_install then
+            show_install_error(install_err)
+        end
     end)
 end
 
