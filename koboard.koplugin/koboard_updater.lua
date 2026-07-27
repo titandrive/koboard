@@ -17,13 +17,21 @@ local cached_zip_url = nil
 local last_check_time = nil
 local check_in_flight = false
 
-local function show_install_error(message)
+local function show_error(prefix, message)
     message = tostring(message)
     message = message:match("^(.-)\nstack traceback:") or message
     UIManager:show(InfoMessage:new{
-        text = _("Installation failed: ") .. message,
+        text = prefix .. message,
         timeout = 5,
     })
+end
+
+local function show_install_error(message)
+    show_error(_("Installation failed: "), message)
+end
+
+local function show_check_error(message)
+    show_error(_("Update check failed: "), message)
 end
 
 local function shell_quote(value)
@@ -32,40 +40,6 @@ end
 
 local function command_succeeded(ret)
     return ret == 0 or ret == true
-end
-
-local function install_zip_fallback(zip_path, plugin_path, cache_dir, lfs)
-    local extract_dir = cache_dir .. "/koboard_extract"
-    os.execute("rm -rf " .. shell_quote(extract_dir))
-    local ok_mkdir, mkdir_err = lfs.mkdir(extract_dir)
-    if not ok_mkdir then
-        return false, _("Could not create extraction folder: ") .. tostring(mkdir_err)
-    end
-
-    local ret = os.execute("unzip -oq " .. shell_quote(zip_path)
-        .. " -d " .. shell_quote(extract_dir))
-    if not command_succeeded(ret) then
-        os.execute("rm -rf " .. shell_quote(extract_dir))
-        return false, _("Could not unzip update archive.")
-    end
-
-    local source_dir = extract_dir
-    if lfs.attributes(extract_dir .. "/" .. PLUGIN_DIR, "mode") == "directory" then
-        source_dir = extract_dir .. "/" .. PLUGIN_DIR
-    end
-    if lfs.attributes(source_dir .. "/_meta.lua", "mode") ~= "file" then
-        os.execute("rm -rf " .. shell_quote(extract_dir))
-        return false, _("Update archive does not contain KOBoard plugin files.")
-    end
-
-    ret = os.execute("mkdir -p " .. shell_quote(plugin_path)
-        .. " && cp -R " .. shell_quote(source_dir .. "/.")
-        .. " " .. shell_quote(plugin_path .. "/"))
-    os.execute("rm -rf " .. shell_quote(extract_dir))
-    if not command_succeeded(ret) then
-        return false, _("Could not copy update files into plugin folder.")
-    end
-    return true
 end
 
 function Updater.getInstalledVersion()
@@ -220,6 +194,7 @@ function Updater.check(on_success)
         })
 
         UIManager:scheduleIn(0.1, function()
+            local ok_check, check_err = xpcall(function()
             local installed_version = Updater.getInstalledVersion()
             local releases = http_get_json(
                 "https://api.github.com/repos/" .. GITHUB_REPO .. "/releases",
@@ -274,35 +249,25 @@ function Updater.check(on_success)
                     .. "\n" .. strip_markdown(rel.body or "")
             end
 
-            local TextViewer = require("ui/widget/textviewer")
-            local viewer
-            viewer = TextViewer:new{
-                title = _("Update available!"),
+            UIManager:show(ConfirmBox:new{
                 text = _("Installed: ") .. "v" .. installed_version .. "\n"
                     .. _("Latest: ") .. "v" .. latest_version .. "\n\n"
                     .. table.concat(notes, "\n\n"),
-                add_default_buttons = false,
-                buttons_table = {{
-                    {
-                        text = _("Close"),
-                        callback = function()
-                            UIManager:close(viewer)
-                        end,
-                    },
-                    {
-                        text = _("Update and restart"),
-                        callback = function()
-                            UIManager:close(viewer)
-                            if not latest_zip_url then
-                                Updater.offerReleasesPage(_("No download available for this release."))
-                                return
-                            end
-                            Updater.install(latest_zip_url, installed_version, latest_version, on_success)
-                        end,
-                    },
-                }},
-            }
-            UIManager:show(viewer)
+                ok_text = _("Update"),
+                ok_callback = function()
+                    if not latest_zip_url then
+                        Updater.offerReleasesPage(_("No download available for this release."))
+                        return
+                    end
+                    Updater.install(latest_zip_url, installed_version, latest_version, on_success)
+                end,
+                cancel_text = _("Later"),
+            })
+            end, debug.traceback)
+
+            if not ok_check then
+                show_check_error(check_err)
+            end
         end)
     end)
 end
@@ -369,18 +334,70 @@ function Updater.install(zip_url, old_version, new_version, on_success)
         end
 
         local plugin_path = DataStorage:getDataDir() .. "/plugins/" .. PLUGIN_DIR
+        local extract_dir = cache_dir .. "/koboard_extract"
+        os.execute("rm -rf " .. shell_quote(extract_dir))
+        local ok_mkdir, mkdir_err = lfs.mkdir(extract_dir)
+        if not ok_mkdir then
+            error(_("Could not create extraction folder: ") .. tostring(mkdir_err))
+        end
+
         local ok, err
         if type(Device.unpackArchive) == "function" then
-            ok, err = Device:unpackArchive(zip_path, plugin_path, true)
+            ok, err = Device:unpackArchive(zip_path, extract_dir, true)
         else
-            ok, err = install_zip_fallback(zip_path, plugin_path, cache_dir, lfs)
+            local ret = os.execute("unzip -oq " .. shell_quote(zip_path)
+                .. " -d " .. shell_quote(extract_dir))
+            ok = command_succeeded(ret)
+            if not ok then
+                err = _("Could not extract the update archive.")
+            end
         end
         pcall(os.remove, zip_path)
 
         if not ok then
+            os.execute("rm -rf " .. shell_quote(extract_dir))
             show_install_error(err)
             return
         end
+
+        local source_dir = extract_dir
+        if lfs.attributes(extract_dir .. "/" .. PLUGIN_DIR, "mode") == "directory" then
+            source_dir = extract_dir .. "/" .. PLUGIN_DIR
+        end
+        if lfs.attributes(source_dir .. "/_meta.lua", "mode") ~= "file"
+                or lfs.attributes(source_dir .. "/main.lua", "mode") ~= "file"
+                or lfs.attributes(source_dir .. "/koboard_updater.lua", "mode") ~= "file" then
+            os.execute("rm -rf " .. shell_quote(extract_dir))
+            error(_("Update archive is missing required KOBoard files."))
+        end
+
+        local staged_plugin_path = plugin_path .. ".update"
+        local backup_plugin_path = plugin_path .. ".backup"
+        os.execute("rm -rf " .. shell_quote(staged_plugin_path))
+        os.execute("rm -rf " .. shell_quote(backup_plugin_path))
+        local ret = os.execute("mkdir -p " .. shell_quote(staged_plugin_path)
+            .. " && cp -R " .. shell_quote(source_dir .. "/.")
+            .. " " .. shell_quote(staged_plugin_path .. "/"))
+        os.execute("rm -rf " .. shell_quote(extract_dir))
+        if not command_succeeded(ret) then
+            os.execute("rm -rf " .. shell_quote(staged_plugin_path))
+            error(_("Could not stage the updated plugin files."))
+        end
+
+        local moved_old, move_old_err = os.rename(plugin_path, backup_plugin_path)
+        if not moved_old then
+            os.execute("rm -rf " .. shell_quote(staged_plugin_path))
+            error(_("Could not prepare the existing plugin for replacement: ")
+                .. tostring(move_old_err))
+        end
+
+        local moved_new, move_new_err = os.rename(staged_plugin_path, plugin_path)
+        if not moved_new then
+            os.rename(backup_plugin_path, plugin_path)
+            os.execute("rm -rf " .. shell_quote(staged_plugin_path))
+            error(_("Could not activate the updated plugin: ") .. tostring(move_new_err))
+        end
+        os.execute("rm -rf " .. shell_quote(backup_plugin_path))
 
         if on_success then pcall(on_success) end
 
