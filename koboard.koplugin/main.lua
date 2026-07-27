@@ -457,6 +457,12 @@ function KOBoard:init()
         last_editor_cursor = cursor
     end
 
+    local function clearPendingInput()
+        pcall(os.remove, input_path)
+        pcall(os.remove, input_snapshot_path)
+        pcall(os.remove, backspace_path)
+    end
+
     local function deleteChar()
         if current_vk and current_vk.delChar and pcall(current_vk.delChar, current_vk) then
             return
@@ -530,6 +536,7 @@ function KOBoard:init()
         kb_active = false
         current_vk = nil
         rememberEditorState(nil, nil)
+        clearPendingInput()
         if vk then vk.visible = false end
         pcall(hideIME)
     end
@@ -546,6 +553,9 @@ function KOBoard:init()
             return
         end
         if kb_active or vk.visible then return end
+        -- A final IME update may arrive while the previous editor is closing.
+        -- Do not let that stale snapshot overwrite this editor's initial text.
+        clearPendingInput()
         current_vk = vk
         kb_active = true
         vk.visible = true
@@ -569,6 +579,7 @@ function KOBoard:init()
         kb_active = false
         current_vk = nil
         rememberEditorState(nil, nil)
+        clearPendingInput()
         vk.visible = false
         pcall(hideIME)
     end
