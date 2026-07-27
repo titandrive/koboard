@@ -2,6 +2,20 @@
 
 KOBoard v0.6.3 repairs a recurring failure in the plugin's self-updater.
 
+### Keyboard-session fix included
+
+This release also includes the KOBoard input-state fix introduced in v0.6.2.
+When an editor is closed, KOBoard now clears the pending Android IME input
+snapshot, its comparison snapshot, and any queued backspaces. It performs the
+same cleanup before opening the next keyboard session.
+
+Previously, text or deletions left in those files could survive after closing
+an editor. Reopening an editor could then repopulate an old query or apply
+backspaces from the previous session after the user began typing. Each editor
+now starts with clean pending-input state.
+
+### Why the updater failed
+
 The updater bundled with v0.6.1 and v0.6.2 could terminate KOReader after
 discovering a newer release. Its update-check result screen ran in an
 unguarded callback, so a UI error became a fatal application error before the
