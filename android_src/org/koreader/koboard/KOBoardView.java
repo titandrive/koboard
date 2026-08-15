@@ -2,6 +2,7 @@ package org.koreader.koboard;
 
 import android.content.Context;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -52,7 +53,8 @@ public class KOBoardView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        outAttrs.inputType = InputType.TYPE_CLASS_TEXT;
+        outAttrs.inputType = InputType.TYPE_CLASS_TEXT
+            | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
         outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE
             | EditorInfo.IME_FLAG_NO_EXTRACT_UI
             | EditorInfo.IME_FLAG_NO_FULLSCREEN;
@@ -60,6 +62,11 @@ public class KOBoardView extends View {
         inputConnection.setEditorState(editorText, selectionStart, selectionEnd);
         outAttrs.initialSelStart = selectionStart;
         outAttrs.initialSelEnd = selectionEnd;
+        outAttrs.initialCapsMode = TextUtils.getCapsMode(
+            editorText,
+            Math.max(0, Math.min(selectionStart, editorText.length())),
+            TextUtils.CAP_MODE_SENTENCES
+        );
         return inputConnection;
     }
 }

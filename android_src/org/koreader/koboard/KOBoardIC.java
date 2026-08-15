@@ -2,6 +2,7 @@ package org.koreader.koboard;
 
 import android.text.Editable;
 import android.text.Selection;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.view.KeyEvent;
 import android.view.View;
@@ -104,6 +105,15 @@ public class KOBoardIC extends BaseInputConnection {
     @Override
     public CharSequence getSelectedText(int flags) {
         return super.getSelectedText(flags);
+    }
+
+    @Override
+    public int getCursorCapsMode(int reqModes) {
+        Editable editable = getEditable();
+        if (editable == null) return 0;
+        int cursor = Selection.getSelectionStart(editable);
+        if (cursor < 0) cursor = editable.length();
+        return TextUtils.getCapsMode(editable, cursor, reqModes);
     }
 
     @Override
