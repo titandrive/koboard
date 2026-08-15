@@ -1,13 +1,19 @@
 package org.koreader.koboard;
 
 import android.app.Activity;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class KOBoardShow implements Runnable {
     private static KOBoardView view;
+    private static ViewTreeObserver.OnGlobalLayoutListener layoutListener;
 
     private final InputMethodManager imm;
     private final Activity activity;
@@ -44,7 +50,53 @@ public class KOBoardShow implements Runnable {
         view.setFocusable(true);
         view.setFocusableInTouchMode(true);
         view.requestFocus();
+        installKeyboardHeightListener();
         imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    private void installKeyboardHeightListener() {
+        if (layoutListener != null) {
+            return;
+        }
+        final View root = activity.getWindow().getDecorView();
+        layoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
+            private int lastHeight = -1;
+
+            @Override
+            public void onGlobalLayout() {
+                Rect visible = new Rect();
+                root.getWindowVisibleDisplayFrame(visible);
+                // visible.bottom is in display coordinates, while root.getHeight()
+                // excludes some system-bar regions on fullscreen KOReader. Use the
+                // display height so both sides of the subtraction share coordinates.
+                Point displaySize = new Point();
+                activity.getWindowManager().getDefaultDisplay().getRealSize(displaySize);
+                int height = Math.max(0, displaySize.y - visible.bottom);
+                if (height == lastHeight) {
+                    return;
+                }
+                lastHeight = height;
+                publishKeyboardHeight(height);
+            }
+        };
+        root.getViewTreeObserver().addOnGlobalLayoutListener(layoutListener);
+    }
+
+    private void publishKeyboardHeight(int height) {
+        File target = new File(extFilesDir, "koboard_height");
+        File temporary = new File(extFilesDir, "koboard_height.tmp");
+        try {
+            FileWriter writer = new FileWriter(temporary, false);
+            writer.write(Integer.toString(height));
+            writer.close();
+            if (!temporary.renameTo(target)) {
+                FileWriter fallback = new FileWriter(target, false);
+                fallback.write(Integer.toString(height));
+                fallback.close();
+                temporary.delete();
+            }
+        } catch (IOException ignored) {
+        }
     }
 
     public static void updateState(final String text, final int start, final int end) {
